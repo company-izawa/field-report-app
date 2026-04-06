@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  password   String?
+  role       String   @default("worker") // "worker", "manager", "admin"
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  reports    Report[]
+
+  @@map("users")
+}
+
+model Site {
+  id         String   @id @default(cuid())
+  siteName   String   @map("site_name")
+  clientName String   @map("client_name")
+  status     String   @default("active") // "active", "closed"
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  reports    Report[]
+
+  @@map("sites")
+}
+
+model ReportCategory {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  name       String
+  sortOrder  Int      @default(0) @map("sort_order")
+
+  reports    Report[]
+
+  @@map("report_categories")
+}
+
+model Report {
+  id               String   @id @default(cuid())
+  reportNo         String   @unique @map("report_no")
+  userId           String   @map("user_id")
+  siteId           String   @map("site_id")
+  categoryId       String   @map("category_id")
+  title            String?
+  transcriptText   String?  @map("transcript_text")
+  memoText         String?  @map("memo_text")
+  reportedAt       DateTime @map("reported_at")
+  status           String   @default("unchecked") // "unchecked", "checked"
+  isImportant      Boolean  @default(false) @map("is_important")
+  requiresEstimate Boolean  @default(false) @map("requires_estimate")
+  hasAudio         Boolean  @default(false) @map("has_audio")
+  hasImage         Boolean  @default(false) @map("has_image")
+  hasVideo         Boolean  @default(false) @map("has_video")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user             User           @relation(fields: [userId], references: [id])
+  site             Site           @relation(fields: [siteId], references: [id])
+  category         ReportCategory @relation(fields: [categoryId], references: [id])
+
+  @@map("reports")
+}
