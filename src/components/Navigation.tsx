@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, PenSquare, FolderOpen, Search, Bell, FileText, LogOut } from 'lucide-react';
+import { Home, PenSquare, FolderOpen, Search, Bell, FileText, LogOut, Settings } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 
 type NavType = {
@@ -104,6 +104,27 @@ export default function Navigation({ type, user }: NavType) {
             </Link>
           )
         })}
+
+        {(user?.role === 'manager' || user?.role === 'admin') && (
+          <>
+            <div className="pt-8 pb-2">
+              <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                管理者専用
+              </p>
+            </div>
+            <Link
+              href="/admin/users"
+              className={`flex items-center px-4 py-3 text-sm rounded-xl transition-all duration-200 ${
+                pathname.startsWith('/admin')
+                  ? 'bg-primary-50 text-primary-700 font-semibold shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <Settings size={20} className="mr-3" />
+              管理者設定
+            </Link>
+          </>
+        )}
       </nav>
 
       <div className="mt-auto border-t border-slate-200 pt-4 pb-2">

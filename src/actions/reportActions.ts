@@ -112,6 +112,8 @@ export async function getReports(filters?: {
     hasAudio: r.hasAudio,
     hasImage: r.hasImage,
     hasVideo: r.hasVideo,
+    imageUrls: r.imageUrls || [],
+    videoUrls: r.videoUrls || [],
   }))
 }
 
@@ -146,6 +148,8 @@ export async function getReportById(id: string) {
     hasAudio: r.hasAudio,
     hasImage: r.hasImage,
     hasVideo: r.hasVideo,
+    imageUrls: r.imageUrls || [],
+    videoUrls: r.videoUrls || [],
     tags: r.isImportant ? ['重要'] : [], // Dummy implementation for now, tags require a relation table
   }
 }
@@ -170,10 +174,11 @@ export async function createReport(data: any) {
       status: 'unchecked',
       isImportant: data.isImportant || false,
       requiresEstimate: data.requiresEstimate || false,
-      // For now ignore files implementation
-      hasAudio: false,
-      hasImage: false,
-      hasVideo: false,
+      hasAudio: !!data.transcriptText,
+      hasImage: !!data.imageUrls?.length,
+      hasVideo: !!data.videoUrls?.length,
+      imageUrls: data.imageUrls || [],
+      videoUrls: data.videoUrls || [],
     }
   })
 

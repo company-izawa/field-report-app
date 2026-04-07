@@ -104,26 +104,26 @@ export default function ReportDetailClient({ report }: { report: any }) {
           )}
         </div>
 
-        {/* Attachments Dummy */}
-        {(report.hasImage || report.hasVideo) && (
+        {/* Attachments */}
+        {(report.imageUrls?.length > 0 || report.videoUrls?.length > 0) && (
           <div className="p-5 border-t border-slate-100">
              <h3 className="text-sm font-bold text-slate-500 mb-3 flex items-center gap-1.5">
                <ImageIcon size={16} /> 添付ファイル
              </h3>
              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                 {report.hasImage && (
-                    <div className="aspect-square bg-slate-200 rounded-lg flex items-center justify-center text-slate-400">
-                      <ImageIcon size={32} />
-                    </div>
-                 )}
-                 {report.hasVideo && (
-                    <div className="aspect-square bg-slate-800 rounded-lg flex items-center justify-center text-white relative">
-                      <Video size={32} />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 rounded-lg">
-                        <Play size={24} className="opacity-80" />
+                 {report.imageUrls?.map((url: string, index: number) => (
+                    <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+                      <img src={url} alt={`attachment-${index}`} className="w-full h-full object-cover hover:scale-105 transition-transform" />
+                    </a>
+                 ))}
+                 {report.videoUrls?.map((url: string, index: number) => (
+                    <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="aspect-square bg-slate-900 rounded-lg overflow-hidden border border-slate-200 relative block">
+                      <video src={url} className="w-full h-full object-cover opacity-70" />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <Play size={24} className="opacity-80 text-white" />
                       </div>
-                    </div>
-                 )}
+                    </a>
+                 ))}
              </div>
           </div>
         )}

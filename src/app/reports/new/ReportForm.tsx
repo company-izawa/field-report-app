@@ -2,8 +2,9 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mic, Image as ImageIcon, Video, AlertTriangle, CircleDollarSign, Send, Save } from 'lucide-react';
+import { Mic, Image as ImageIcon, Video, AlertTriangle, CircleDollarSign, Send, Save, X } from 'lucide-react';
 import { createReport } from '@/actions/reportActions';
+import { upload } from '@vercel/blob/client';
 
 export default function ReportForm({ sites, categories }: { sites: any[], categories: any[] }) {
   const router = useRouter();
@@ -16,8 +17,38 @@ export default function ReportForm({ sites, categories }: { sites: any[], catego
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [videoUrls, setVideoUrls] = useState<string[]>([]);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setIsUploading(true);
+    try {
+      const file = e.target.files[0];
+      const newBlob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+      });
+      
+      if (type === 'image') {
+        setImageUrls(prev => [...prev, newBlob.url]);
+      } else {
+        setVideoUrls(prev => [...prev, newBlob.url]);
+      }
+    } catch (error) {
+      console.error(error);
+      alert('ファイルのアップロードに失敗しました。');
+    } finally {
+      setIsUploading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
 
   const startRecording = async () => {
     try {
@@ -95,6 +126,8 @@ export default function ReportForm({ sites, categories }: { sites: any[], catego
         transcriptText: transcript,
         isImportant,
         requiresEstimate,
+        imageUrls,
+        videoUrls,
       });
       alert('報告を保存しました');
       router.push('/');
@@ -185,19 +218,49 @@ export default function ReportForm({ sites, categories }: { sites: any[], catego
           </div>
         </div>
 
-        {/* 添付ファイル */}
+            {/* 添付ファイル */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <label className="block text-sm font-bold text-slate-700">添付ファイル</label>
+          <div className="flex justify-between items-center">
+            <label className="block text-sm font-bold text-slate-700">添付ファイル</label>
+            {isUploading && <span className="text-xs font-bold text-blue-600 animate-pulse">アップロード中...</span>}
+          </div>
+          
           <div className="grid grid-cols-2 gap-3">
-             <button type="button" className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 rounded-xl hover:bg-slate-50 hover:border-slate-400 transition-colors text-slate-500">
+             <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={(e) => handleFileUpload(e, 'image')} />
+             <input type="file" accept="video/*" className="hidden" ref={videoInputRef} onChange={(e) => handleFileUpload(e, 'video')} />
+             
+             <button type="button" onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 rounded-xl hover:bg-slate-50 hover:border-slate-400 transition-colors text-slate-500">
                <ImageIcon size={24} className="mb-2" />
                <span className="text-sm font-medium">写真を追加</span>
              </button>
-             <button type="button" className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 rounded-xl hover:bg-slate-50 hover:border-slate-400 transition-colors text-slate-500">
+             <button type="button" onClick={() => videoInputRef.current?.click()} className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 rounded-xl hover:bg-slate-50 hover:border-slate-400 transition-colors text-slate-500">
                <Video size={24} className="mb-2" />
                <span className="text-sm font-medium">動画を追加</span>
              </button>
           </div>
+
+          {/* プレビュー領域 */}
+          {(imageUrls.length > 0 || videoUrls.length > 0) && (
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+              {imageUrls.map((url, i) => (
+                <div key={url} className="relative w-20 h-20 rounded-lg overflow-hidden border border-slate-200">
+                  <img src={url} alt="attached" className="object-cover w-full h-full" />
+                  <button type="button" onClick={() => setImageUrls(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 hover:bg-red-500">
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              {videoUrls.map((url, i) => (
+                <div key={url} className="relative w-20 h-20 rounded-lg overflow-hidden border border-slate-200 bg-slate-900">
+                  <video src={url} className="object-cover w-full h-full opacity-70" />
+                  <button type="button" onClick={() => setVideoUrls(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 hover:bg-red-500 z-10">
+                    <X size={12} />
+                  </button>
+                  <Video size={16} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white/80" />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 付加情報 */}
@@ -241,8 +304,8 @@ export default function ReportForm({ sites, categories }: { sites: any[], catego
           <button type="button" className="flex-1 bg-white border border-slate-300 text-slate-700 font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-50 shadow-sm">
             <Save size={18} /> 下書き保存
           </button>
-          <button type="submit" disabled={isSubmitting} className={`flex-[2] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-sm ${isSubmitting ? 'bg-slate-400' : 'bg-primary-600 hover:bg-primary-700'}`}>
-            <Send size={18} /> {isSubmitting ? '送信中...' : '報告を送信'}
+          <button type="submit" disabled={isSubmitting || isUploading} className={`flex-[2] text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-sm ${(isSubmitting || isUploading) ? 'bg-slate-400' : 'bg-primary-600 hover:bg-primary-700'}`}>
+            <Send size={18} /> {isSubmitting ? '送信中...' : isUploading ? 'アップロード中...' : '報告を送信'}
           </button>
         </div>
       </form>

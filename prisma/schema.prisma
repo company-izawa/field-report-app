@@ -65,6 +65,8 @@ model Report {
   hasAudio         Boolean  @default(false) @map("has_audio")
   hasImage         Boolean  @default(false) @map("has_image")
   hasVideo         Boolean  @default(false) @map("has_video")
+  imageUrls        String[] @default([]) @map("image_urls")
+  videoUrls        String[] @default([]) @map("video_urls")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
