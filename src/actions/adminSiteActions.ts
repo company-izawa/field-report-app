@@ -7,7 +7,7 @@ import { authOptions } from "@/lib/auth"
 
 async function checkAdmin() {
   const session = await getServerSession(authOptions)
-  if (!session || (session.user.role !== 'manager' && session.user.role !== 'admin')) {
+  if (!session || !session.user || ((session.user as any).role !== 'manager' && (session.user as any).role !== 'admin')) {
     throw new Error('管理者権限がありません')
   }
 }
