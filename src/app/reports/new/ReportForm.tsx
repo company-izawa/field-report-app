@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mic, Image as ImageIcon, Video, AlertTriangle, CircleDollarSign, Send, Save } from 'lucide-react';
 import { createReport } from '@/actions/reportActions';
@@ -15,16 +15,71 @@ export default function ReportForm({ sites, categories }: { sites: any[], catego
   const [requiresEstimate, setRequiresEstimate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        const fileExtension = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('webm') ? 'webm' : 'ogg';
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        
+        setIsTranscribing(true);
+
+        const formData = new FormData();
+        formData.append('file', audioBlob, `audio.${fileExtension}`);
+
+        try {
+          const res = await fetch('/api/transcribe', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!res.ok) throw new Error('Transcription failed');
+          const data = await res.json();
+          setTranscript(prev => prev ? prev + '\n' + data.text : data.text);
+        } catch (error) {
+          console.error(error);
+          alert('文字起こしに失敗しました。');
+        } finally {
+          setIsTranscribing(false);
+          stream.getTracks().forEach(track => track.stop());
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+      alert('マイクへのアクセスが拒否されました。ブラウザの設定をご確認ください。');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
   const handleRecord = () => {
     if (!isRecording) {
-      setIsRecording(true);
-      // Dummy transcription effect
-      setTimeout(() => {
-        setTranscript('本日の第二ポンプ設備の点検ですが、異常なしで完了しました。');
-        setIsRecording(false);
-      }, 2000);
+      startRecording();
     } else {
-      setIsRecording(false);
+      stopRecording();
     }
   };
 
@@ -101,17 +156,21 @@ export default function ReportForm({ sites, categories }: { sites: any[], catego
           <div className="flex items-center justify-between">
             <label className="block text-sm font-bold text-slate-700">音声で報告</label>
             {isRecording && <span className="flex items-center text-xs font-bold text-red-500 animate-pulse"><span className="w-2 h-2 rounded-full bg-red-500 mr-2"></span>録音中...</span>}
+            {isTranscribing && <span className="flex items-center text-xs font-bold text-blue-600 animate-pulse">文字起こし中...</span>}
           </div>
           
           <div className="text-center">
             <button 
               type="button" 
               onClick={handleRecord}
-              className={`p-6 rounded-full inline-flex items-center justify-center transition-all shadow-md ${isRecording ? 'bg-red-50 shadow-white outline outline-4 outline-red-200' : 'bg-primary-600 hover:bg-primary-700 text-white hover:scale-105'}`}
+              disabled={isTranscribing}
+              className={`p-6 rounded-full inline-flex items-center justify-center transition-all shadow-md ${isRecording ? 'bg-red-50 shadow-white outline outline-4 outline-red-200' : isTranscribing ? 'bg-slate-300 cursor-not-allowed' : 'bg-primary-600 hover:bg-primary-700 text-white hover:scale-105'}`}
             >
               <Mic size={32} className={isRecording ? 'text-red-600 animate-pulse' : ''} />
             </button>
-            <p className="mt-2 text-xs text-slate-500 font-medium">ボタンを押して話す</p>
+            <p className="mt-2 text-xs text-slate-500 font-medium">
+              {isRecording ? 'もう一度押して録音停止' : isTranscribing ? 'AIが処理しています...' : 'ボタンを押して話す'}
+            </p>
           </div>
 
           <div>
