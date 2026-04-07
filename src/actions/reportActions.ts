@@ -17,6 +17,12 @@ export async function getSites() {
   })
 }
 
+export async function getSiteById(id: string) {
+  return await prisma.site.findUnique({
+    where: { id }
+  })
+}
+
 export async function getSitesWithStats() {
   const sites = await prisma.site.findMany({
     orderBy: { createdAt: 'desc' },

@@ -1,26 +1,23 @@
-"use client";
-
-import { sites, reports, users } from '@/data/mock';
+import { getSiteById, getReports } from '@/actions/reportActions';
 import { ReportCard } from '@/components/ReportCard';
 import Link from 'next/link';
 import { ChevronLeft, Filter } from 'lucide-react';
 import { notFound } from 'next/navigation';
-import { useState } from 'react';
 
-export default function SiteDetail({ params }: { params: { id: string } }) {
-  const [filter, setFilter] = useState<string>('all');
+export default async function SiteDetail({ params, searchParams }: { params: { id: string }, searchParams: { filter?: string } }) {
+  const filter = searchParams.filter || 'all';
   
-  const site = sites.find(s => s.id === params.id);
+  const site = await getSiteById(params.id);
   if (!site) return notFound();
 
-  let filteredReports = reports.filter(r => r.siteId === site.id);
+  let reports = await getReports({ siteId: site.id });
   
   if (filter === 'unchecked') {
-    filteredReports = filteredReports.filter(r => r.status === 'unchecked');
+    reports = reports.filter(r => r.status === 'unchecked');
   } else if (filter === 'trouble') {
-    filteredReports = filteredReports.filter(r => r.category === 'trouble');
+    reports = reports.filter(r => r.category === 'trouble');
   } else if (filter === 'extra_work') {
-    filteredReports = filteredReports.filter(r => r.category === 'extra_work');
+    reports = reports.filter(r => r.category === 'extra_work');
   }
 
   return (
@@ -29,46 +26,46 @@ export default function SiteDetail({ params }: { params: { id: string } }) {
         <Link href="/sites" className="inline-flex items-center text-sm font-semibold text-slate-500 hover:text-primary-600 transition-colors">
           <ChevronLeft size={16} className="mr-1" /> 現場一覧へ戻る
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{site.name}</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{site.siteName}</h1>
       </header>
 
       {/* フィルタ */}
       <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center gap-2 overflow-x-auto hide-scrollbar">
         <Filter size={16} className="text-slate-400 shrink-0 ml-1 mr-2" />
-        <button 
-          onClick={() => setFilter('all')}
+        <Link 
+          href={`/sites/${site.id}?filter=all`}
           className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${filter === 'all' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
         >
           すべて
-        </button>
-        <button 
-          onClick={() => setFilter('unchecked')}
+        </Link>
+        <Link 
+          href={`/sites/${site.id}?filter=unchecked`}
           className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${filter === 'unchecked' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
         >
           未確認
-        </button>
-        <button 
-          onClick={() => setFilter('trouble')}
+        </Link>
+        <Link 
+          href={`/sites/${site.id}?filter=trouble`}
           className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${filter === 'trouble' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}
         >
           トラブル
-        </button>
-        <button 
-           onClick={() => setFilter('extra_work')}
+        </Link>
+        <Link 
+           href={`/sites/${site.id}?filter=extra_work`}
           className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${filter === 'extra_work' ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'}`}
         >
           追加工事
-        </button>
+        </Link>
       </div>
 
       <div className="space-y-3">
-        {filteredReports.length > 0 ? (
-          filteredReports.map(report => (
+        {reports.length > 0 ? (
+          reports.map((report: any) => (
             <ReportCard 
               key={report.id} 
               report={report} 
-              siteName={site.name} 
-              userName={users.find(u => u.id === report.userId)?.name || ''}
+              siteName={site.siteName} 
+              userName={report.userName}
             />
           ))
         ) : (
