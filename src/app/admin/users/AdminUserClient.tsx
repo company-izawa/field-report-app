@@ -10,15 +10,21 @@ export default function AdminUserClient({ initialUsers }: { initialUsers: any[] 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'worker' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'worker', lineWorksUserId: '' });
 
   const handleOpenModal = (user?: any) => {
     if (user) {
       setEditingUser(user);
-      setFormData({ name: user.name, email: user.email, password: '', role: user.role });
+      setFormData({ 
+        name: user.name, 
+        email: user.email, 
+        password: '', 
+        role: user.role,
+        lineWorksUserId: user.lineWorksUserId || ''
+      });
     } else {
       setEditingUser(null);
-      setFormData({ name: '', email: '', password: '', role: 'worker' });
+      setFormData({ name: '', email: '', password: '', role: 'worker', lineWorksUserId: '' });
     }
     setIsModalOpen(true);
   };
@@ -71,6 +77,7 @@ export default function AdminUserClient({ initialUsers }: { initialUsers: any[] 
             <tr>
               <th className="px-6 py-4">名前 / メールアドレス</th>
               <th className="px-6 py-4">権限</th>
+              <th className="px-6 py-4">LINE WORKS ユーザーID</th>
               <th className="px-6 py-4">状態</th>
               <th className="px-6 py-4">操作</th>
             </tr>
@@ -93,6 +100,15 @@ export default function AdminUserClient({ initialUsers }: { initialUsers: any[] 
                   {user.role === 'admin' && <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-purple-100 text-purple-700"><Shield size={14} /> 管理者</span>}
                   {user.role === 'manager' && <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-100 text-blue-700"><UserCog size={14} /> マネージャー</span>}
                   {user.role === 'worker' && <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700"><User size={14} /> 作業員</span>}
+                </td>
+                <td className="px-6 py-4">
+                  {user.lineWorksUserId ? (
+                    <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono text-slate-600">
+                      {user.lineWorksUserId}
+                    </code>
+                  ) : (
+                    <span className="text-xs text-slate-400 italic">未登録</span>
+                  )}
                 </td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -145,6 +161,11 @@ export default function AdminUserClient({ initialUsers }: { initialUsers: any[] 
                   <option value="worker">作業員（一般）</option>
                   <option value="manager">マネージャー（現場管理・ユーザー管理）</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">LINE WORKS ユーザーID</label>
+                <input type="text" value={formData.lineWorksUserId} onChange={e => setFormData({...formData, lineWorksUserId: e.target.value})} className="w-full border p-2.5 rounded-lg border-slate-300 focus:ring-2 focus:ring-primary-500 outline-none placeholder:text-slate-300" placeholder="例: user@company (未指定は空)" />
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-slate-100">

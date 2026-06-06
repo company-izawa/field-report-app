@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
+import { sendReportNotification } from "@/lib/lineworks"
 
 // ====== 現場 (Sites) ======
 export async function getSites() {
@@ -124,6 +125,10 @@ export async function getReportById(id: string) {
       site: true,
       user: true,
       category: true,
+      comments: {
+        include: { user: true },
+        orderBy: { createdAt: 'asc' }
+      }
     }
   })
 
@@ -151,6 +156,13 @@ export async function getReportById(id: string) {
     imageUrls: r.imageUrls || [],
     videoUrls: r.videoUrls || [],
     tags: r.isImportant ? ['重要'] : [], // Dummy implementation for now, tags require a relation table
+    comments: r.comments.map((c: any) => ({
+      id: c.id,
+      text: c.text,
+      userId: c.userId,
+      userName: c.user.name,
+      createdAt: c.createdAt.toISOString()
+    }))
   }
 }
 
@@ -181,6 +193,28 @@ export async function createReport(data: any) {
       videoUrls: data.videoUrls || [],
     }
   })
+
+  // LINE WORKS通知の送信
+  try {
+    const reportWithDetails = await prisma.report.findUnique({
+      where: { id: created.id },
+      include: { user: true, site: true }
+    })
+    
+    if (reportWithDetails) {
+      await sendReportNotification(
+        '', // 特定の上司に送る場合はここで指定（今回は.envのADMIN_USER_IDにフォールバック）
+        reportWithDetails.id,
+        reportWithDetails.reportNo,
+        reportWithDetails.user.name,
+        reportWithDetails.site.siteName,
+        reportWithDetails.title || '',
+        reportWithDetails.memoText || ''
+      )
+    }
+  } catch (err) {
+    console.error('Failed to send LINE WORKS notification:', err)
+  }
 
   revalidatePath('/reports')
   revalidatePath('/')

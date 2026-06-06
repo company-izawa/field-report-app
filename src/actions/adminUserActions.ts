@@ -20,7 +20,7 @@ export async function adminGetUsers() {
   })
 }
 
-export async function adminAddUser(data: { name: string; email: string; password?: string; role: string }) {
+export async function adminAddUser(data: { name: string; email: string; password?: string; role: string; lineWorksUserId?: string }) {
   await checkAdmin()
   
   const hashedPassword = data.password ? await bcrypt.hash(data.password, 10) : undefined
@@ -32,18 +32,23 @@ export async function adminAddUser(data: { name: string; email: string; password
       password: hashedPassword,
       role: data.role || 'worker',
       isActive: true,
+      lineWorksUserId: data.lineWorksUserId || null,
     }
   })
 
   revalidatePath('/admin/users')
 }
 
-export async function adminUpdateUser(id: string, data: { name?: string; email?: string; password?: string; role?: string; isActive?: boolean }) {
+export async function adminUpdateUser(id: string, data: { name?: string; email?: string; password?: string; role?: string; isActive?: boolean; lineWorksUserId?: string }) {
   await checkAdmin()
 
   const updateData: any = { ...data }
   if (data.password) {
     updateData.password = await bcrypt.hash(data.password, 10)
+  }
+  
+  if (data.lineWorksUserId !== undefined) {
+    updateData.lineWorksUserId = data.lineWorksUserId || null
   }
 
   await prisma.user.update({

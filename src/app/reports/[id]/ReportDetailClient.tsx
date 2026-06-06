@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Edit, Share2, CheckCircle2, XCircle, Mic, Image as ImageIcon, Video, Play } from 'lucide-react';
+import { ChevronLeft, Edit, Share2, CheckCircle2, XCircle, Mic, Image as ImageIcon, Video, Play, MessageSquare } from 'lucide-react';
 import { CategoryBadge, StatusBadge } from '@/components/Badges';
 import { updateReportStatus } from '@/actions/reportActions';
 
@@ -125,6 +125,26 @@ export default function ReportDetailClient({ report }: { report: any }) {
                     </a>
                  ))}
              </div>
+          </div>
+        )}
+
+        {/* Comments from LINE WORKS */}
+        {report.comments && report.comments.length > 0 && (
+          <div className="p-5 border-t border-slate-100 bg-slate-50">
+            <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-1.5">
+              <MessageSquare size={16} className="text-primary-600" /> 上司からのコメント (LINE WORKS)
+            </h3>
+            <div className="space-y-4">
+              {report.comments.map((comment: any) => (
+                <div key={comment.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-bold text-slate-800">{comment.userName}</span>
+                    <span className="text-xs text-slate-500">{new Date(comment.createdAt).toLocaleString('ja-JP')}</span>
+                  </div>
+                  <p className="text-[15px] text-slate-700 whitespace-pre-wrap">{comment.text}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
