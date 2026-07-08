@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { prisma } from './prisma';
 
 const CLIENT_ID = 'Gys42U_cPd7hdF4MmKCz';
 const CLIENT_SECRET = '3lTWpvVe2O';
@@ -56,7 +57,6 @@ export async function getAccessToken(): Promise<string> {
     throw new Error('LINE WORKS API credentials are not properly set in environment variables.');
   }
 
-  // 1. JWTの発行
   const iat = Math.floor(Date.now() / 1000);
   const exp = iat + 3600; // 1時間有効
   
@@ -69,7 +69,6 @@ export async function getAccessToken(): Promise<string> {
 
   const token = jwt.sign(payload, PRIVATE_KEY, { algorithm: 'RS256' });
 
-  // 2. アクセストークンの取得
   const params = new URLSearchParams();
   params.append('assertion', token);
   params.append('grant_type', 'urn:ietf:params:oauth:grant-type:jwt-bearer');
@@ -88,7 +87,7 @@ export async function getAccessToken(): Promise<string> {
   if (!response.ok) {
     const errText = await response.text();
     console.error('Failed to get LINE WORKS access token:', errText);
-    throw new Error('Failed to get LINE WORKS access token');
+    throw new Error(`Failed to get LINE WORKS access token: ${errText}`);
   }
 
   const data = await response.json();
@@ -118,7 +117,6 @@ export async function sendReportNotification(
 
     const displayTitle = title ? title : (memoText ? memoText.substring(0, 50) + '...' : '報告内容なし');
 
-    // Button Template形式のメッセージ
     const message = {
       content: {
         type: 'button_template',
@@ -151,11 +149,43 @@ export async function sendReportNotification(
     if (!response.ok) {
       const errText = await response.text();
       console.error('Failed to send LINE WORKS notification:', errText);
+      
+      // DBにAPI送信エラーを記録します
+      try {
+        const systemUser = await prisma.user.findFirst();
+        if (systemUser) {
+          await prisma.comment.create({
+            data: {
+              reportId: reportId,
+              userId: systemUser.id,
+              text: `[LINE WORKS通知エラー] Status: ${response.status}, Details: ${errText}`
+            }
+          });
+        }
+      } catch (dbErr) {
+        console.error('Failed to write notify error to DB:', dbErr);
+      }
     } else {
       console.log('LINE WORKS notification sent successfully to:', targetUserId);
     }
   } catch (error) {
     console.error('Error sending LINE WORKS notification:', error);
+    
+    // DBにシステム例外を記録します
+    try {
+      const systemUser = await prisma.user.findFirst();
+      if (systemUser) {
+        await prisma.comment.create({
+          data: {
+            reportId: reportId,
+            userId: systemUser.id,
+            text: `[LINE WORKS通知例外] Error: ${(error as Error).message}\nStack: ${(error as Error).stack?.substring(0, 300)}`
+          }
+        });
+      }
+    } catch (dbErr) {
+      console.error('Failed to write notify exception to DB:', dbErr);
+    }
   }
 }
 
