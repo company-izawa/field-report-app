@@ -107,7 +107,7 @@ export async function sendReportNotification(
   title: string,
   memoText: string
 ) {
-  const targetUserId = userId || process.env.LINEWORKS_ADMIN_USER_ID;
+  const targetUserId = userId || process.env.LINEWORKS_ADMIN_USER_ID || 'iz.24161@izawaironworks';
   if (!targetUserId) {
     console.warn('No target userId for LINE WORKS notification');
     return;
