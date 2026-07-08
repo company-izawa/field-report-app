@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Postback（ボタン押下）の処理
     if (type === 'postback') {
-      const data = body.postback?.data;
+      const data = body.data;
       if (data) {
         const params = new URLSearchParams(data);
         const action = params.get('action');

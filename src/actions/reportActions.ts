@@ -73,7 +73,13 @@ export async function getReports(filters?: {
   const where: any = {}
 
   if (filters?.siteId) where.siteId = filters.siteId
-  if (filters?.categoryId) where.categoryId = filters.categoryId
+  if (filters?.categoryId) {
+    if (['trouble', 'extra_work', 'question', 'daily'].includes(filters.categoryId)) {
+      where.category = { code: filters.categoryId }
+    } else {
+      where.categoryId = filters.categoryId
+    }
+  }
   if (filters?.userId) where.userId = filters.userId
   if (filters?.status) where.status = filters.status
   if (filters?.keyword) {
@@ -198,7 +204,7 @@ export async function createReport(data: any) {
   try {
     const reportWithDetails = await prisma.report.findUnique({
       where: { id: created.id },
-      include: { user: true, site: true }
+      include: { user: true, site: true, category: true }
     })
     
     if (reportWithDetails) {
@@ -211,12 +217,49 @@ export async function createReport(data: any) {
         reportWithDetails.title || '',
         reportWithDetails.memoText || ''
       )
+
+      // アプリ内通知のDB保存 (管理者・マネージャー宛)
+      const categoryCode = reportWithDetails.category.code;
+      const isImportant = reportWithDetails.isImportant;
+
+      if (categoryCode === 'trouble' || categoryCode === 'extra_work' || categoryCode === 'question' || isImportant) {
+        let title = '';
+        if (categoryCode === 'trouble') {
+          title = `【トラブル】${reportWithDetails.user.name}が${reportWithDetails.site.siteName}でトラブルを報告しました。`;
+        } else if (categoryCode === 'extra_work') {
+          title = `【追加工事】${reportWithDetails.site.siteName}で追加工事が発生しました。（見積必要）`;
+        } else if (categoryCode === 'question') {
+          title = `【質問】${reportWithDetails.user.name}から${reportWithDetails.site.siteName}に関する質問があります。`;
+        } else if (isImportant) {
+          title = `【重要報告】${reportWithDetails.user.name}が${reportWithDetails.site.siteName}で重要報告を提出しました。`;
+        }
+
+        const managers = await prisma.user.findMany({
+          where: {
+            role: { in: ['manager', 'admin'] }
+          }
+        });
+
+        await Promise.all(
+          managers.map(m => 
+            prisma.notification.create({
+              data: {
+                userId: m.id,
+                type: categoryCode === 'daily' ? 'important' : categoryCode,
+                title: title,
+                isRead: false
+              }
+            })
+          )
+        );
+      }
     }
   } catch (err) {
-    console.error('Failed to send LINE WORKS notification:', err)
+    console.error('Failed to send LINE WORKS or save in-app notification:', err)
   }
 
   revalidatePath('/reports')
+  revalidatePath('/notifications')
   revalidatePath('/')
   
   return created.id

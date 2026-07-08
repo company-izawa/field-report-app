@@ -45,6 +45,8 @@ export async function adminUpdateUser(id: string, data: { name?: string; email?:
   const updateData: any = { ...data }
   if (data.password) {
     updateData.password = await bcrypt.hash(data.password, 10)
+  } else {
+    delete updateData.password // パスワードが未入力（空文字）の場合は更新対象から除外する
   }
   
   if (data.lineWorksUserId !== undefined) {

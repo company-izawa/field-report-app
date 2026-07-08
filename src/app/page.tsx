@@ -8,9 +8,10 @@ export default async function Home() {
   const reports = await getReports();
 
   const unreadCount = reports.filter(r => r.status === 'unchecked').length;
+  const checkedCount = reports.filter(r => r.status === 'checked').length;
   const troubleCount = reports.filter(r => r.category === 'trouble').length;
   const extraWorkCount = reports.filter(r => r.category === 'extra_work').length;
-  const todayCount = reports.length; // Simplified for MVP
+  const todayCount = reports.length;
 
   return (
     <div className="space-y-6">
@@ -20,10 +21,14 @@ export default async function Home() {
       </header>
 
       {/* 目立たせるダッシュボード */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Link href="/search/results?status=unchecked" className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center transition-all hover:border-blue-300 hover:shadow-md">
           <span className="text-3xl font-black text-blue-600 mb-1">{unreadCount}</span>
           <span className="text-xs font-semibold text-slate-500 uppercase">未確認</span>
+        </Link>
+        <Link href="/search/results?status=checked" className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center transition-all hover:border-emerald-300 hover:shadow-md">
+          <span className="text-3xl font-black text-emerald-600 mb-1">{checkedCount}</span>
+          <span className="text-xs font-semibold text-slate-500 uppercase">確認済み</span>
         </Link>
         <Link href="/search/results?categoryId=trouble" className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center transition-all hover:border-red-300 hover:shadow-md">
           <span className="text-3xl font-black text-red-600 mb-1">{troubleCount}</span>
@@ -33,10 +38,10 @@ export default async function Home() {
           <span className="text-3xl font-black text-purple-600 mb-1">{extraWorkCount}</span>
           <span className="text-xs font-semibold text-slate-500 uppercase">追加工事</span>
         </Link>
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+        <Link href="/search/results" className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center transition-all hover:border-slate-300 hover:shadow-md col-span-2 sm:col-span-1">
           <span className="text-3xl font-black text-slate-800 mb-1">{todayCount}</span>
-          <span className="text-xs font-semibold text-slate-500 uppercase">本日の報告</span>
-        </div>
+          <span className="text-xs font-semibold text-slate-500 uppercase">全体の報告</span>
+        </Link>
       </div>
 
       {/* アクションボタン */}

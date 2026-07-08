@@ -17,6 +17,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - login (the login page itself)
      */
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|login).*)",
+    "/((?!api/auth|api/lineworks|_next/static|_next/image|favicon.ico|login).*)",
   ],
 };

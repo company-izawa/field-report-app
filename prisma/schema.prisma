@@ -23,6 +23,7 @@ model User {
 
   reports         Report[]
   comments        Comment[]
+  notifications   Notification[]
 
   @@map("users")
 }
@@ -93,3 +94,17 @@ model Comment {
 
   @@map("comments")
 }
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  type      String   // "trouble", "extra_work", "question", "send_error"
+  title     String
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+

@@ -93,9 +93,9 @@ export async function sendReportNotification(
         contentText: `新しい業務報告が提出されました。\n\n【報告者】${reporterName}\n【現場】${siteName}\n【内容】${displayTitle}`,
         actions: [
           {
-            type: 'postback',
+            type: 'message',
             label: '確認済みにする',
-            data: `action=check&reportId=${reportId}`
+            postback: `action=check&reportId=${reportId}`
           },
           {
             type: 'uri',
