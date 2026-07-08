@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 
-const CLIENT_ID = process.env.LINEWORKS_CLIENT_ID && process.env.LINEWORKS_CLIENT_ID !== 'Gys42U_cPd7hdF4MmKCz' ? process.env.LINEWORKS_CLIENT_ID : 'Gys42U_cPd7hdF4MmKCz';
-const CLIENT_SECRET = process.env.LINEWORKS_CLIENT_SECRET && process.env.LINEWORKS_CLIENT_SECRET !== '3lTWpvVe2O' ? process.env.LINEWORKS_CLIENT_SECRET : '3lTWpvVe2O';
-const SERVICE_ACCOUNT = process.env.LINEWORKS_SERVICE_ACCOUNT && process.env.LINEWORKS_SERVICE_ACCOUNT !== '5by15.serviceaccount@izawaironworks' ? process.env.LINEWORKS_SERVICE_ACCOUNT : '5by15.serviceaccount@izawaironworks';
+const CLIENT_ID = 'Gys42U_cPd7hdF4MmKCz';
+const CLIENT_SECRET = '3lTWpvVe2O';
+const SERVICE_ACCOUNT = '5by15.serviceaccount@izawaironworks';
 
 function formatPrivateKey(rawKey: string): string {
   if (!rawKey) return '';
@@ -41,15 +41,11 @@ Z4oDiGyOg03Zmp5pBI6MJlOFaGIEkeOk6mrpcJEW/CDpRl2vy3az++yx8sqB4J+j
 LSScZZsH8nstE9lJZnj8ZMo9F67gFClh9SH95NYH7Q2QFElYeNf8+w7i0Eee6CaO
 VdvE0EP+ByKK9/ImPFDzwWUZ`;
 
-const PRIVATE_KEY = formatPrivateKey(process.env.LINEWORKS_PRIVATE_KEY && process.env.LINEWORKS_PRIVATE_KEY.length > 500 ? process.env.LINEWORKS_PRIVATE_KEY : RAW_PRIVATE_KEY);
-const BOT_ID = process.env.LINEWORKS_BOT_ID && process.env.LINEWORKS_BOT_ID !== '12270440' ? process.env.LINEWORKS_BOT_ID : '12270440';
+const PRIVATE_KEY = formatPrivateKey(RAW_PRIVATE_KEY);
+const BOT_ID = '12270440';
 
 const getNextAuthUrl = () => {
-  const url = process.env.NEXTAUTH_URL;
-  if (!url || url.includes('localhost')) {
-    return 'https://field-report-app-ecru.vercel.app';
-  }
-  return url;
+  return 'https://field-report-app-ecru.vercel.app';
 };
 
 /**
