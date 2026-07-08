@@ -10,25 +10,6 @@ export async function POST(req: NextRequest) {
     const type = body.type;
     const userId = body.source?.userId;
 
-    // Webhook受信のログをデータベースに強制記録（デバッグ用）
-    try {
-      const latestReport = await prisma.report.findFirst({
-        orderBy: { createdAt: 'desc' }
-      });
-      const systemUser = await prisma.user.findFirst();
-      if (latestReport && systemUser) {
-        await prisma.comment.create({
-          data: {
-            reportId: latestReport.id,
-            userId: systemUser.id,
-            text: `[Webhook受信デバッグ] Type: ${type}, User: ${userId}, Body: ${rawBody.substring(0, 300)}`
-          }
-        });
-      }
-    } catch (dbErr) {
-      console.error('Failed to write debug log to DB:', dbErr);
-    }
-
     if (!userId) {
       return NextResponse.json({ success: true });
     }
@@ -68,9 +49,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Message（テキスト返信）の処理
-    if (type === 'message' && body.message?.type === 'text') {
-      const text = body.message.text;
+    // 2. Message（テキスト返信）の処理 (LINE WORKS 2.0 仕様: body.content.type === 'text')
+    if (type === 'message' && body.content?.type === 'text') {
+      const text = body.content.text;
 
       // 「確認済みにする」というテキストメッセージそのものが送られてきた場合の緊急フォールバック
       if (text === '確認済みにする') {
@@ -128,30 +109,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Webhook error:', error);
-    
-    // エラー内容をデータベースに書き込みます
-    try {
-      const latestReport = await prisma.report.findFirst({
-        orderBy: { createdAt: 'desc' }
-      });
-      const systemUser = await prisma.user.findFirst();
-      if (latestReport && systemUser) {
-        await prisma.comment.create({
-          data: {
-            reportId: latestReport.id,
-            userId: systemUser.id,
-            text: `[Webhookエラーデバッグ] Error: ${(error as Error).message}\nStack: ${(error as Error).stack?.substring(0, 300)}`
-          }
-        });
-      }
-    } catch (dbErr) {
-      console.error('Failed to write debug error to DB:', dbErr);
-    }
-
     return NextResponse.json({ 
       error: 'Internal Server Error', 
       message: (error as Error).message,
-      stack: (error as Error).stack
     }, { status: 500 });
   }
 }
