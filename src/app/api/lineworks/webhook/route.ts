@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const type = body.type;
     const userId = body.source?.userId;
 
-    // Webhook受信のログをデータベース（最新のレポートのコメント欄）に強制記録します
+    // Webhook受信のログをデータベースに強制記録（デバッグ用）
     try {
       const latestReport = await prisma.report.findFirst({
         orderBy: { createdAt: 'desc' }
@@ -33,11 +33,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    // LINE WORKS 2.0 の仕様に合わせ、ポストバックデータの位置を抽出します
+    // (body.data もしくは body.content.postback)
+    const postbackData = body.data || body.content?.postback;
+
     // 1. Postback（ボタン押下）の処理
-    if (type === 'postback') {
-      const data = body.data;
-      if (data) {
-        const params = new URLSearchParams(data);
+    if (type === 'postback' || postbackData) {
+      if (postbackData) {
+        const params = new URLSearchParams(postbackData);
         const action = params.get('action');
         const reportId = params.get('reportId');
 
@@ -59,6 +62,8 @@ export async function POST(req: NextRequest) {
               `上司があなたの報告（${updatedReport.reportNo}）を確認しました。`
             );
           }
+          
+          return NextResponse.json({ success: true });
         }
       }
     }
@@ -124,7 +129,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Webhook error:', error);
     
-    // エラー内容をデータベースに書き込んで見える化します
+    // エラー内容をデータベースに書き込みます
     try {
       const latestReport = await prisma.report.findFirst({
         orderBy: { createdAt: 'desc' }
