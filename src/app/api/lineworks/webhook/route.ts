@@ -1,24 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendTextMessage } from '@/lib/lineworks';
-import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
+  let rawBody = '';
   try {
-    const rawBody = await req.text();
-    const signature = req.headers.get('x-works-signature');
-    const botId = req.headers.get('x-works-botid');
-    
-    // LINE WORKS側での署名検証（本番環境では必須ですが、今回は簡易的にスキップまたはログのみとします）
-    // const hash = crypto.createHmac('sha256', process.env.LINEWORKS_BOT_SECRET).update(rawBody).digest('base64');
-    // if (signature !== hash) return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-
+    rawBody = await req.text();
     const body = JSON.parse(rawBody);
-
-    // LINE WORKS webhook payload usually has an array of events or a single event depending on configuration
-    // But API 2.0 Webhook usually sends a single JSON object.
     const type = body.type;
     const userId = body.source?.userId;
+
+    // Webhook受信のログをデータベース（最新のレポートのコメント欄）に強制記録します
+    try {
+      const latestReport = await prisma.report.findFirst({
+        orderBy: { createdAt: 'desc' }
+      });
+      const systemUser = await prisma.user.findFirst();
+      if (latestReport && systemUser) {
+        await prisma.comment.create({
+          data: {
+            reportId: latestReport.id,
+            userId: systemUser.id,
+            text: `[Webhook受信デバッグ] Type: ${type}, User: ${userId}, Body: ${rawBody.substring(0, 300)}`
+          }
+        });
+      }
+    } catch (dbErr) {
+      console.error('Failed to write debug log to DB:', dbErr);
+    }
 
     if (!userId) {
       return NextResponse.json({ success: true });
@@ -58,22 +67,32 @@ export async function POST(req: NextRequest) {
     if (type === 'message' && body.message?.type === 'text') {
       const text = body.message.text;
 
-      // LINE WORKSのWebhookからは「どのメッセージに対する返信か」の文脈を直接得るのが難しいため、
-      // 簡易的に「最新の報告」に対するコメントとして処理します。
+      // 「確認済みにする」というテキストメッセージそのものが送られてきた場合の緊急フォールバック
+      if (text === '確認済みにする') {
+        const latestReport = await prisma.report.findFirst({
+          orderBy: { createdAt: 'desc' },
+          include: { user: true }
+        });
+        if (latestReport && latestReport.status !== 'checked') {
+          await prisma.report.update({
+            where: { id: latestReport.id },
+            data: { status: 'checked' }
+          });
+          await sendTextMessage(userId, '報告を確認済みにしました。');
+          return NextResponse.json({ success: true });
+        }
+      }
+
       const latestReport = await prisma.report.findFirst({
         orderBy: { createdAt: 'desc' },
         include: { user: true }
       });
 
       if (latestReport) {
-        // CommentをDBに保存
-        // ※上司のuserIdを取得するために、lineWorksUserIdからUserを検索するか、簡易的にSystemとして保存します。
-        // ここでは、一番権限が強いユーザー（管理者）等のダミーIDまたは、該当ユーザーを探します。
         let commenter = await prisma.user.findFirst({
           where: { lineWorksUserId: userId }
         });
 
-        // 登録されていなければ、フォールバックとして最初のユーザーを割り当てる（デモ用）
         if (!commenter) {
           commenter = await prisma.user.findFirst();
         }
@@ -104,6 +123,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Webhook error:', error);
+    
+    // エラー内容をデータベースに書き込んで見える化します
+    try {
+      const latestReport = await prisma.report.findFirst({
+        orderBy: { createdAt: 'desc' }
+      });
+      const systemUser = await prisma.user.findFirst();
+      if (latestReport && systemUser) {
+        await prisma.comment.create({
+          data: {
+            reportId: latestReport.id,
+            userId: systemUser.id,
+            text: `[Webhookエラーデバッグ] Error: ${(error as Error).message}\nStack: ${(error as Error).stack?.substring(0, 300)}`
+          }
+        });
+      }
+    } catch (dbErr) {
+      console.error('Failed to write debug error to DB:', dbErr);
+    }
+
     return NextResponse.json({ 
       error: 'Internal Server Error', 
       message: (error as Error).message,
